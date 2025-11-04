@@ -12,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/upload")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class UploadController {
 

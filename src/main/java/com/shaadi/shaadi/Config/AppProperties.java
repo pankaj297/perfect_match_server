@@ -21,6 +21,8 @@ public class AppProperties {
                 "https://laganmelava.netlify.app");
     }
 
+
+
     @Data
     public static class Admin {
         private String username = "admin";
