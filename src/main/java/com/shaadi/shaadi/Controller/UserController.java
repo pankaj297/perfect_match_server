@@ -1,163 +1,166 @@
 package com.shaadi.shaadi.Controller;
 
-import java.util.Optional;
+import com.shaadi.shaadi.dto.UserUpsertRequest;
+import com.shaadi.shaadi.exception.NotFoundException;
+import com.shaadi.shaadi.mapper.UserMapper;
 import com.shaadi.shaadi.Model.User;
 import com.shaadi.shaadi.Services.CloudinaryService;
 import com.shaadi.shaadi.Services.UserService;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.shaadi.shaadi.Services.dto.UploadResult;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Map;
-
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
+@Validated
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final CloudinaryService cloudinaryService;
 
-    @Autowired
-    private CloudinaryService cloudinaryService;
-
-    @PostMapping("/register")
+    // Create (compat: /register retained)
+    @PostMapping({ "", "/", "/register" })
     public ResponseEntity<?> registerUser(
-            @ModelAttribute User user,
+            @ModelAttribute @Valid UserUpsertRequest userReq,
             @RequestParam(value = "profilePhoto", required = false) MultipartFile profilePhoto,
             @RequestParam(value = "aadhaar", required = false) MultipartFile aadhaar) {
-        try {
-            // Profile Photo
-            if (profilePhoto != null && !profilePhoto.isEmpty()) {
-                if (!profilePhoto.getContentType().startsWith("image/")) {
-                    return ResponseEntity.badRequest().body("🚫 Only images allowed for Profile Photo");
-                }
-                String profileUrl = cloudinaryService.uploadFile(profilePhoto);
-                user.setProfilePhotoPath(profileUrl);
+
+        // Validate files
+        if (profilePhoto != null && !profilePhoto.isEmpty()) {
+            if (profilePhoto.getContentType() == null || !profilePhoto.getContentType().startsWith("image/")) {
+                return ResponseEntity.badRequest().body("🚫 Only images allowed for Profile Photo");
             }
-
-            // Aadhaar
-            if (aadhaar != null && !aadhaar.isEmpty()) {
-                String aadhaarUrl = cloudinaryService.uploadFile(aadhaar);
-                user.setAadhaarPath(aadhaarUrl);
-            }
-
-            User savedUser = userService.saveUser(user);
-
-            // Return Cloudinary URLs
-            return ResponseEntity.ok(Map.of(
-                    "id", savedUser.getId(),
-                    "user", savedUser,
-                    "profilePhotoUrl", savedUser.getProfilePhotoPath(),
-                    "aadhaarUrl", savedUser.getAadhaarPath()));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Error registering user: " + e.getMessage());
         }
+        if (aadhaar != null && !aadhaar.isEmpty()) {
+            String ct = aadhaar.getContentType();
+            boolean allow = ct != null && (ct.startsWith("image/") || ct.equals("application/pdf"));
+            if (!allow) {
+                return ResponseEntity.badRequest().body("🚫 Aadhaar must be an image or PDF");
+            }
+        }
+
+        User user = UserMapper.toEntity(userReq);
+
+        // Uploads
+        if (profilePhoto != null && !profilePhoto.isEmpty()) {
+            UploadResult res = cloudinaryService.uploadFile(profilePhoto, "shaadi-profiles");
+            user.setProfilePhotoPath(res.url());
+            user.setProfilePhotoPublicId(res.publicId());
+        }
+        if (aadhaar != null && !aadhaar.isEmpty()) {
+            UploadResult res = cloudinaryService.uploadFile(aadhaar, "shaadi-aadhaar");
+            user.setAadhaarPath(res.url());
+            user.setAadhaarPublicId(res.publicId());
+        }
+
+        User savedUser = userService.saveUser(user);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", savedUser.getId());
+        payload.put("user", savedUser);
+        payload.put("profilePhotoUrl", savedUser.getProfilePhotoPath());
+        payload.put("aadhaarUrl", savedUser.getAadhaarPath());
+
+        return ResponseEntity.ok(payload);
     }
 
-    // 2️⃣ Get all users
-    @GetMapping("/")
+    // Get all users (compat: "/" retained)
+    @GetMapping({ "", "/" })
     public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    // 3️⃣ Get user by ID
+    // Get user by ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        Optional<User> optionalUser = userService.getUserById(id);
-        return optionalUser.<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(404).body("User not found"));
+        return userService.getUserById(id)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
-    // 4️⃣ Admin Login
-    @PostMapping("/abc/login")
+    // Admin Login (via properties)
+    @PostMapping("/admin/login")
     public ResponseEntity<String> loginAdmin(@RequestBody Map<String, String> payload) {
         String username = payload.get("username");
         String password = payload.get("password");
+        // Backward compatible simple check; moved to AdminAuthController for better
+        // separation
         if ("admin".equals(username) && "admin123".equals(password)) {
             return ResponseEntity.ok("Login successful");
-        } else {
-            return ResponseEntity.status(401).body("Invalid credentials");
         }
+        return ResponseEntity.status(401).body("Invalid credentials");
     }
 
-    // 5️⃣ Update user
-    @PutMapping("/update/{id}")
+    // Update (compat: /update/{id} retained)
+    @PutMapping({ "/{id}", "/update/{id}" })
     public ResponseEntity<?> updateUser(
             @PathVariable Long id,
-            @ModelAttribute User user,
+            @ModelAttribute @Valid UserUpsertRequest userReq,
             @RequestParam(value = "profilePhoto", required = false) MultipartFile profilePhoto,
             @RequestParam(value = "aadhaar", required = false) MultipartFile aadhaar) {
-        try {
-            User existingUser = userService.getUserById(id)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Update fields
-            existingUser.setName(user.getName());
-            existingUser.setGender(user.getGender());
-            existingUser.setDob(user.getDob());
-            existingUser.setBirthplace(user.getBirthplace());
-            existingUser.setKuldevat(user.getKuldevat());
-            existingUser.setGotra(user.getGotra());
-            existingUser.setHeight(user.getHeight());
-            existingUser.setBloodGroup(user.getBloodGroup());
-            existingUser.setEducation(user.getEducation());
-            existingUser.setProfession(user.getProfession());
-            existingUser.setFatherName(user.getFatherName());
-            existingUser.setFatherProfession(user.getFatherProfession());
-            existingUser.setMotherName(user.getMotherName());
-            existingUser.setMotherProfession(user.getMotherProfession());
-            existingUser.setSiblings(user.getSiblings());
-            existingUser.setMama(user.getMama());
-            existingUser.setKaka(user.getKaka());
-            existingUser.setAddress(user.getAddress());
-            existingUser.setMobile(user.getMobile());
+        User existingUser = userService.getUserById(id)
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
-            // Profile Photo upload
-            if (profilePhoto != null && !profilePhoto.isEmpty()) {
-                if (!profilePhoto.getContentType().startsWith("image/")) {
-                    return ResponseEntity.badRequest().body("🚫 Only image files allowed for Profile Photo");
-                }
-                String profileUrl = cloudinaryService.uploadFile(profilePhoto);
-                existingUser.setProfilePhotoPath(profileUrl);
+        // Update fields
+        UserMapper.updateEntity(existingUser, userReq);
+
+        // New profile photo
+        if (profilePhoto != null && !profilePhoto.isEmpty()) {
+            if (profilePhoto.getContentType() == null || !profilePhoto.getContentType().startsWith("image/")) {
+                return ResponseEntity.badRequest().body("🚫 Only image files allowed for Profile Photo");
             }
+            // delete old
+            cloudinaryService.deleteByPublicId(existingUser.getProfilePhotoPublicId());
 
-            // Aadhaar upload
-            if (aadhaar != null && !aadhaar.isEmpty()) {
-                String aadhaarUrl = cloudinaryService.uploadFile(aadhaar);
-                existingUser.setAadhaarPath(aadhaarUrl);
-            }
-
-            User updatedUser = userService.saveUser(existingUser);
-
-            // Return Cloudinary URLs directly
-            return ResponseEntity.ok(Map.of(
-                    "user", updatedUser,
-                    "profilePhotoUrl", updatedUser.getProfilePhotoPath(),
-                    "aadhaarUrl", updatedUser.getAadhaarPath()));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Error updating user: " + e.getMessage());
+            UploadResult res = cloudinaryService.uploadFile(profilePhoto, "shaadi-profiles");
+            existingUser.setProfilePhotoPath(res.url());
+            existingUser.setProfilePhotoPublicId(res.publicId());
         }
+
+        // New aadhaar
+        if (aadhaar != null && !aadhaar.isEmpty()) {
+            String ct = aadhaar.getContentType();
+            boolean allow = ct != null && (ct.startsWith("image/") || ct.equals("application/pdf"));
+            if (!allow) {
+                return ResponseEntity.badRequest().body("🚫 Aadhaar must be an image or PDF");
+            }
+            // delete old
+            cloudinaryService.deleteByPublicId(existingUser.getAadhaarPublicId());
+
+            UploadResult res = cloudinaryService.uploadFile(aadhaar, "shaadi-aadhaar");
+            existingUser.setAadhaarPath(res.url());
+            existingUser.setAadhaarPublicId(res.publicId());
+        }
+
+        User updatedUser = userService.saveUser(existingUser);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("user", updatedUser);
+        payload.put("profilePhotoUrl", updatedUser.getProfilePhotoPath());
+        payload.put("aadhaarUrl", updatedUser.getAadhaarPath());
+
+        return ResponseEntity.ok(payload);
     }
 
-    // 6️⃣ Delete user
-    @DeleteMapping("/delete/{id}")
+    // Delete (compat: /delete/{id} retained)
+    @DeleteMapping({ "/{id}", "/delete/{id}" })
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        try {
-            userService.deleteUser(id);
-            return ResponseEntity.ok("User deleted successfully!");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Error deleting user: " + e.getMessage());
-        }
+        User user = userService.getUserById(id)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        // Best effort cleanup
+        cloudinaryService.deleteByPublicId(user.getProfilePhotoPublicId());
+        cloudinaryService.deleteByPublicId(user.getAadhaarPublicId());
+
+        userService.deleteUser(id);
+        return ResponseEntity.ok("User deleted successfully!");
     }
 }

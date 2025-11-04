@@ -1,5 +1,6 @@
 package com.shaadi.shaadi.Config;
 
+
 import com.cloudinary.Cloudinary;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +28,6 @@ public class CloudinaryConfig {
         config.put("api_key", apiKey);
         config.put("api_secret", apiSecret);
         config.put("secure", "true");
-        
         return new Cloudinary(config);
     }
 }
