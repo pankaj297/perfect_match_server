@@ -18,7 +18,7 @@ public class AppProperties {
     public static class Cors {
         private List<String> allowedOrigins = List.of(
                 "http://localhost:5173",
-                "https://banjaramelava.netlify.app");
+                "https://laganmelava.netlify.app");
     }
 
     @Data
