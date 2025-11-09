@@ -26,7 +26,7 @@ public class UserController {
     private final CloudinaryService cloudinaryService;
 
     // Create (compat: /register retained)
-    @PostMapping({ "", "/", "/register" })
+    @PostMapping("/register")
     public ResponseEntity<?> registerUser(
             @ModelAttribute @Valid UserUpsertRequest userReq,
             @RequestParam(value = "profilePhoto", required = false) MultipartFile profilePhoto,
@@ -72,7 +72,7 @@ public class UserController {
     }
 
     // Get all users (compat: "/" retained)
-    @GetMapping({ "", "/" })
+    @GetMapping("/")
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
@@ -99,7 +99,7 @@ public class UserController {
     }
 
     // Update (compat: /update/{id} retained)
-    @PutMapping({ "/{id}", "/update/{id}" })
+    @PutMapping("/update/{id}")
     public ResponseEntity<?> updateUser(
             @PathVariable Long id,
             @ModelAttribute @Valid UserUpsertRequest userReq,
@@ -151,7 +151,7 @@ public class UserController {
     }
 
     // Delete (compat: /delete/{id} retained)
-    @DeleteMapping({ "/{id}", "/delete/{id}" })
+    @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         User user = userService.getUserById(id)
                 .orElseThrow(() -> new NotFoundException("User not found"));
