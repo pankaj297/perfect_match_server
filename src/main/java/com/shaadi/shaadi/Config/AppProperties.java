@@ -25,7 +25,7 @@ public class AppProperties {
 
     @Data
     public static class Admin {
-        private String username = "admin";
-        private String password = "admin123"; // override via env in prod
+        private String username = "nitin5319";
+        private String password = "nitin5319"; // override via env in prod
     }
 }

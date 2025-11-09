@@ -92,7 +92,7 @@ public class UserController {
         String password = payload.get("password");
         // Backward compatible simple check; moved to AdminAuthController for better
         // separation
-        if ("admin".equals(username) && "admin123".equals(password)) {
+        if ("pankaj1807".equals(username) && "pankaj1807".equals(password)) {
             return ResponseEntity.ok("Login successful");
         }
         return ResponseEntity.status(401).body("Invalid credentials");
