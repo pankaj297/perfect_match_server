@@ -14,7 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         // registry.addMapping(
         //         "/**")
-        registry.addMapping("/api/**")
+        registry.addMapping("/**")
                 .allowedOrigins(
                     "https://laganmelava.netlify.app",
                         "http://localhost:5173")

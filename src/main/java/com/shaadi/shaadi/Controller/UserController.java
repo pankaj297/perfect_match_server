@@ -19,7 +19,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@Validated
+@CrossOrigin(origins = "https://laganmelava.netlify.app")
 public class UserController {
 
     private final UserService userService;

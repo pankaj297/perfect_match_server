@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "https://laganmelava.netlify.app")
 public class AdminAuthController {
 
     private final AdminAuthService adminAuthService;

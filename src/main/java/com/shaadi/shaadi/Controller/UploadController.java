@@ -13,6 +13,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/upload")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "https://laganmelava.netlify.app")
 public class UploadController {
 
     private final CloudinaryService cloudinaryService;
