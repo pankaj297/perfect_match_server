@@ -10,7 +10,6 @@ import com.shaadi.shaadi.Services.dto.UploadResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -79,7 +78,7 @@ public class UserController {
 
     // Get user by ID
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+    public ResponseEntity<?> getUserById(@PathVariable String id) {
         return userService.getUserById(id)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseThrow(() -> new NotFoundException("User not found"));
@@ -101,7 +100,7 @@ public class UserController {
     // Update (compat: /update/{id} retained)
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updateUser(
-            @PathVariable Long id,
+            @PathVariable String id,
             @ModelAttribute @Valid UserUpsertRequest userReq,
             @RequestParam(value = "profilePhoto", required = false) MultipartFile profilePhoto,
             @RequestParam(value = "aadhaar", required = false) MultipartFile aadhaar) {
@@ -117,8 +116,10 @@ public class UserController {
             if (profilePhoto.getContentType() == null || !profilePhoto.getContentType().startsWith("image/")) {
                 return ResponseEntity.badRequest().body("🚫 Only image files allowed for Profile Photo");
             }
-            // delete old
-            cloudinaryService.deleteByPublicId(existingUser.getProfilePhotoPublicId());
+            // delete old if exists
+            if (existingUser.getProfilePhotoPublicId() != null && !existingUser.getProfilePhotoPublicId().isEmpty()) {
+                cloudinaryService.deleteByPublicId(existingUser.getProfilePhotoPublicId());
+            }
 
             UploadResult res = cloudinaryService.uploadFile(profilePhoto, "shaadi-profiles");
             existingUser.setProfilePhotoPath(res.url());
@@ -132,8 +133,10 @@ public class UserController {
             if (!allow) {
                 return ResponseEntity.badRequest().body("🚫 Aadhaar must be an image or PDF");
             }
-            // delete old
-            cloudinaryService.deleteByPublicId(existingUser.getAadhaarPublicId());
+            // delete old if exists
+            if (existingUser.getAadhaarPublicId() != null && !existingUser.getAadhaarPublicId().isEmpty()) {
+                cloudinaryService.deleteByPublicId(existingUser.getAadhaarPublicId());
+            }
 
             UploadResult res = cloudinaryService.uploadFile(aadhaar, "shaadi-aadhaar");
             existingUser.setAadhaarPath(res.url());
@@ -152,13 +155,17 @@ public class UserController {
 
     // Delete (compat: /delete/{id} retained)
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<?> deleteUser(@PathVariable String id) {
         User user = userService.getUserById(id)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
         // Best effort cleanup
-        cloudinaryService.deleteByPublicId(user.getProfilePhotoPublicId());
-        cloudinaryService.deleteByPublicId(user.getAadhaarPublicId());
+        if (user.getProfilePhotoPublicId() != null && !user.getProfilePhotoPublicId().isEmpty()) {
+            cloudinaryService.deleteByPublicId(user.getProfilePhotoPublicId());
+        }
+        if (user.getAadhaarPublicId() != null && !user.getAadhaarPublicId().isEmpty()) {
+            cloudinaryService.deleteByPublicId(user.getAadhaarPublicId());
+        }
 
         userService.deleteUser(id);
         return ResponseEntity.ok("User deleted successfully!");

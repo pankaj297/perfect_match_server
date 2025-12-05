@@ -4,7 +4,6 @@ import com.shaadi.shaadi.Model.User;
 import com.shaadi.shaadi.dto.UserResponse;
 import com.shaadi.shaadi.dto.UserUpsertRequest;
 
-
 public class UserMapper {
 
     private UserMapper() {

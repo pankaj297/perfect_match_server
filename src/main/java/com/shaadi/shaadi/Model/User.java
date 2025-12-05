@@ -1,32 +1,28 @@
 package com.shaadi.shaadi.Model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
-
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
-@Table(name = "users", indexes = { @Index(name = "idx_users_mobile", columnList = "mobile") })
-@EntityListeners(AuditingEntityListener.class)
+@Document(collection = "users")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // Mongo ObjectId as hex string
 
     @Size(max = 120)
     private String name;
@@ -84,24 +80,16 @@ public class User {
     private String address;
 
     @Size(max = 20)
+    @Indexed(name = "idx_users_mobile")
     private String mobile;
 
-    // Cloudinary URLs
-    @Column(length = 500)
+    // Cloudinary URLs and public IDs - length not required for Mongo
     private String profilePhotoPath;
-
-    @Column(length = 500)
     private String aadhaarPath;
-
-    // Cloudinary public IDs (for safe deletion/updates)
-    @Column(length = 255)
     private String profilePhotoPublicId;
-
-    @Column(length = 255)
     private String aadhaarPublicId;
 
     @CreatedDate
-    @Column(updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
