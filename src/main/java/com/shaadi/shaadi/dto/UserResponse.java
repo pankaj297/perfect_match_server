@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 @Value
 @Builder
 public class UserResponse {
-    Long id;
+    String id;
     String name;
     String gender;
     LocalDate dob;

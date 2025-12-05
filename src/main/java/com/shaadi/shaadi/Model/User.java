@@ -21,8 +21,9 @@ import java.time.LocalDateTime;
 @Document(collection = "users")
 public class User {
 
+    // For MongoDB, id is String (ObjectId as text)
     @Id
-    private Long id; // Mongo ObjectId as hex string
+    private String id;
 
     @Size(max = 120)
     private String name;
@@ -79,13 +80,15 @@ public class User {
     @Size(max = 255)
     private String address;
 
+    @Indexed(unique = false) // you can set unique = true if you want unique mobile
     @Size(max = 20)
-    @Indexed(name = "idx_users_mobile")
     private String mobile;
 
-    // Cloudinary URLs and public IDs - length not required for Mongo
+    // Cloudinary URLs
     private String profilePhotoPath;
     private String aadhaarPath;
+
+    // Cloudinary public IDs
     private String profilePhotoPublicId;
     private String aadhaarPublicId;
 
