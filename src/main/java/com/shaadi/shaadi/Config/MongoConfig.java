@@ -6,5 +6,5 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 @Configuration
 @EnableMongoAuditing
 public class MongoConfig {
-    // empty — the annotation enables created/modified auditing for Mongo
+    // Enables @CreatedDate and @LastModifiedDate
 }
